@@ -1,8 +1,11 @@
+---
+output: github_document
+---
 
-# About the project
+# Information about the course
 
 __Introduction to Open Data Science__ tackles the issues relating to open data, open science and data science.
 
 The course deals with topics such as using tools and methods (RStudio, Rmarkdown and GitHub), regression and model validation, logistic regression, clustering and classification, discriminant analysis, K-means clustering, dimensional reduction techniques and much more.
 
-[GitHub repository for this project](https://github.com/anketola/IODS-project)
+[Link to course diary](https://anketola.github.io/IODS-project/)
