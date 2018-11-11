@@ -1,7 +1,123 @@
-# Insert chapter 2 title here
+# Data analysis for week 2
 
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+The dataset used in the analysis here is a subset of data collected by Kimmo Vehkalahti, part of
+ASSIST (Approaches and Study Skills Inventory for Students) 2014. Detailed information about the original dataset can be found [here](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
+
+The original data had 183 observations and 60 variables.
+
+## 1. Exploring the structure and dimensions of the data
+
+The data has gone through a wrangling process. **The wrangling script and output dataset can be found in the GitHub respository (data -folder).** First we will load the wrangled data using R. The file is saved in a local path data/learning2014.csv. The data is loaded with the following command.
+
+
+```{r}
+lrn14 <- read.csv(file = "data/learning2014", header = TRUE)
+
+```
+
+Next we proceed to examine the structure and dimensions. First we invoke command dim() the loaded to dataset to get an idea of the rows and columns in the dataset.
+
+```{r}
+dim (lrn14)
+```
+As we can see, the data has gone down from the original 183 observations and 60 variables to 166 observations and 7 variables. The observations where participants have scored of 0 have been removed, and variables have been combined to "deep", "stra" and "surf" variables based on the questions.
+
+Next we will have a closer look at the structure of the dataset with str() command
+
+```{r}
+str (lrn14)
+```
+
+As can been seen from the output, we have the following seven variables in the dataset: gender("F","M"), age, attitude, deep, stra, surf, points.
+
+The variables "deep", "stra", and "surf" are combinations of results to questions regarding deep, strategic and surface approaches to learning. The points variable indicates exam points.
+
+The variable attitude indicates global attitude towards statistics. The variable is a result of 10 different questions (as a sum), and was scaled back to 1-5 scale during the wrangling process.
+
+## 2. Graphical overview and summaries
+
+We can get a graphical overview of the data using R. 
+
+For this we will use ggplot2 and GGally libraries. We can access them by using the following commands.
+
+```{r}
+library(ggplot2)
+library(GGally)
+```
+
+Next we will create a plot matrix with all variables, genders being seperated by colors.
+
+```{r}
+ggpairs(lrn14, mapping = aes(col = gender, alpha = 0.3), lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+For a numerical overview of the data, we can use the summary command.
+
+
+```{r}
+summary(lrn14)
+```
+
+Description and interpretation of outputs:
+
+As can been seen from the outputs, majority of the participants were female (F:110, M 56). The mean age has been 25.51 and median 22. The age is most likely explained by the fact that most participants have been university students, and the variable is in the typical range for it.
+
+Highest correlation is between attitude and exam points (0.437), indicating a possible, somewhat moderate positive relationship. The correlations between different types of learning strategies and exam results are rather low.
+
+Regarding the distribution between different learning strategies deep learning is somewhat more favoured (mean 3,7 median 3.7) in comparison to strategic learning (mean 3,1, median 3,2) and surface learning (mean 2,8, median 2,9).
+
+## 3. Three explanatory variables with exam points as the target variable
+
+(Parts 3 and 4 of the weekly assignment)
+
+In this part we will choose three variables as explanatory variables and fit a linear regression model with points being the target variable.
+
+For this part of the exercise I choose attitude, age and deep as the explanatory variables. To create a regression model with multiple explanatory values, we invoce lm() command. The first parameter is in format Y ~ X. Y is the target variable so it will be set to "point". Since we use multiple explanatory variables, we substitute X with the three chosen explanatory values. To get a summary for the model we invoke the summary() command. We run the following script for all this:
+
+```{r}
+my_model <- lm(points ~ attitude + age + deep, data = lrn14)
+summary(my_model)
+```
+
+The summary displays information on our model where target variable is points and explanatory values attitude, age and deep. The summary displays the residualds for the model and the coefficients. We can use the coefficients to interpret the parameters for the model.
+
+We now have for each explanatory variables the estimatated effect, the standard error for it, and t- and p-values. We are especially interested in the P-values here to be as small as possible. We cam see that attitude has a very low value, with significance code 0, indicating statistican significance. Age has P-value of 0.15 and deep 0.42.
+
+Next we will refit the model by removing explanatory variables without statistical signigifance. As especially deep doesn't have an statistically significant relationship with the target value, we remove it. The assignment doesn't clearly specify if we can remove multiple variables "if an explanaotry value", so I chose to remove only the least significant attribute. We create and display a summary of the new model with the following script:
+
+```{r}
+my_model2 <- lm(points ~ attitude + age, data = lrn14)
+summary(my_model2)
+```
+
+We have now the summary of the refitted model, with only attitude as explanatory value.
+
+The fitted model has still a strong statistical significance for attitude attribute with age remaining rather same. It's somewhat questionable if the age should be part of the model.
+
+From the summary we can see examine the multiple R squared of the model. The definition of R squared is explained variation / total variation. Generally a higher R value means a better fit. For the model we have R squared value of 0.20. 
+
+## 4. Diagnostic plots
+
+Next we will generate three diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage.
+
+To do this weuse the plot() function and choose with "which" argument the needed plots. In this case the code and output is the following:
+
+```{r}
+plot(my_model, which=c(1:2,5))
+```
+
+Residuals vs. fitted values:
+
+The size of the errors should not depend on the expanatory values. Although the distribution is rather random, there are some observations with very high residual especially in the 20+ fitted value range.
+
+Normal QQ-plot:
+
+From the QQ plot we can explore if the errors in the model are normally distributed. Based on the QQ-plot, we can see the fit with is good especially in the mid-section. There is slight deviation in the low and high ranges, but overall the model seems to be a good fit.
+
+Residuals vs Leverage:
+
+The plot containging Residuals vs Leverage can be used to examine if some observations have particulary high impact. As we can see from the chart, there are some outliers with high impact. However, the outliers seem to be rather evenly distributed.
+
+
