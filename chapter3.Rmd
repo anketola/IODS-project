@@ -1,0 +1,231 @@
+# Data analysis for week 3
+
+The week 3 uses a dataset from UCL Machine Learning Respository by P. Cortez and A. Silva. More information can be found by clicking [here](https://archive.ics.uci.edu/ml/datasets/Student+Performance). 
+
+The database has a related publication:
+
+*P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008. [Web Link](http://www3.dsi.uminho.pt/pcortez/student.pdf).*
+
+## Loading and describing the data
+
+The data being used here examined student performance in two Portuguese schools.
+
+For this analysis, we have prepared the data through a wrangling process. We begin by loading a local dataset using read.csv() command.
+
+```{r}
+alc <- read.csv(file = "data/alc.CSV", header = TRUE)
+```
+
+We can see the names of the variables by examining the column names.
+
+```{r}
+colnames(alc)
+```
+
+The dataset we have loaded now is a joined dataset. The joined datasets dealt with different subjects, one with Mathematics and the other with Portuguese language. Details of the dataset variables can be found [here](https://archive.ics.uci.edu/ml/datasets/Student+Performance).
+
+As an overview, the data has background information on parents such as familysize (famsize -> LE3 if less or equal to 3, otherwise GT3), parents cohabitation status (Pstatus, binary Together/Apart), mother's and father's education (Medu, Fedu) and job (Mjob, Fjob), who the guardian is (guardian: "mother", "father", "other"). Information regarding the student concern home to school travel time (traveltime), weekly study time (study), number of past class failures (failures) etc.
+
+Compared to the original data (which can be found ), there are some changes. For instance, the variable alc_use, that is not in the original dataset, is an average of the weekday and weekday usage. This variable has been used to create the a new logical variable high_use, which is TRUE in case the alc_use is higher than 2, otherwise alc_use is FALSE.
+
+## Studying the relationship between alcohol consumption and other variables
+
+Next will be selected 4 variables and their relationship with alcohol consuption will be examined.
+
+1) First we will choose "studytime", which indicates weekly study time. The hypothesis here is that those spending more time studying will consume less alcohol.
+2) The second varible is "goout". As alchohol is likely to be consumed and obtained when hanging out with friends, this will be connected to alcohol use. 
+3) For the third variable is chosen "absences" which indicates the number of school absences (numeric from 0 to 93). The hypothesis is that absences is higher for those who are high alcohol users.
+4) And as the last variable is chosen "famrel" which measures family realitonships on the scale from 1 (very bad) to 5 (excellent). Alcohol use might be caused by bad family relationship issues. Also he use of alcohol might affect the relationships negatively.
+
+The chosen variables are therefore failures, goout, activities and famrel.
+
+## Exploring the distributions and relationships of chosen variables with alcohol consumption
+
+We are going to add some libraries into use.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+Next, we will examine each chosen variable in relationship to alc_high. First let's have a look at the numerical summary. Instead of alc_high, we look at the alc_use variable.
+
+```{r}
+temp_alc <- data.frame(alc$studytime, alc$goout, alc$absences, alc$famrel, alc$alc_use)
+summary(temp_alc)
+
+```
+
+Goout and famrel variables have rather high values. Especially famrel seems to be high, with median of 4.0 and mean of 3.9. Studytime has the median of 2.0 and median of 2.0. Not much conclusions can be drawn from this. We will now inspect each variable in relationship to alc_high. Absences has median of 3 and mean of 4.5. The max value for absences was 45, and 3rd quartile 6.0. The values for absences can be viewed either as a positive, depending on the viewpoint. Absences might be highly connected with the health variable, but we are not examining that right now. Not many conclusiosn can be drawn from this data. We will next view each variable seperately in connection to high_alc.
+
+#### *Studytime -variable.*
+
+```{r}
+p1 <- ggplot(alc, aes(x = high_use, y = studytime, col = sex))
+p1 + geom_boxplot()
+
+```
+
+
+```{r}
+alc %>% group_by(high_use) %>% summarise(count = n(), mean_studytime = mean(studytime))
+```
+
+Based on this the hypothesis 1 appears to be true. Those who are in the alc_high group spend less time studying.
+
+
+#### *Goout -variable.*
+
+```{r}
+p1 <- ggplot(alc, aes(x = high_use, y = goout, col = sex))
+p1 + geom_boxplot()
+
+```
+
+```{r}
+alc %>% group_by(high_use) %>% summarise(count = n(), mean_goout = mean(goout))
+```
+
+The second hypothesis was that those who go out more spend more alcohol. Although it can be said that all go out quite much, on average the high-users spend more time out. The hypothesis was therefore correct.
+
+#### *Absences -variable.*
+
+```{r}
+p1 <- ggplot(alc, aes(x = high_use, y = absences, col = sex))
+p1 + geom_boxplot()
+
+```
+
+```{r}
+alc %>% group_by(high_use) %>% summarise(count = n(), mean_absences = mean(absences))
+```
+
+Perhaps not surprisingly, those who are high alcohol users have more absences. There seems to be some differences in relation to sex based on the graph. We reiterate the text part with more seperation:
+
+```{r}
+alc %>% group_by(sex, high_use) %>% summarise(count = n(), mean_absences = mean(absences))
+```
+
+It would appear the absences of non- high alcohol user males and females is quite high. The initial hypotehsis is correct, and there also seems to be interesting relationships with sex and absences, although we don't go into more detail with them right now.
+
+
+
+#### *Famrel -variable.*
+
+```{r}
+p1 <- ggplot(alc, aes(x = high_use, y = famrel, col = sex))
+p1 + geom_boxplot()
+
+```
+
+```{r}
+alc %>% group_by(high_use) %>% summarise(count = n(), mean_famrel = mean(famrel))
+```
+
+The famrel variable was hypothesized to be lower for ghigh alcohol users. This seems to be the case, although the difference is not that prominent. However, neither group shows a significant deviation from the mean value for the famrel variable. As there seem to be some more sex related differences, we reiterate again the text table.
+
+```{r}
+alc %>% group_by(sex, high_use) %>% summarise(count = n(), mean_famrel = mean(famrel))
+```
+
+The males seem to have have scored slightly higher non-high user group. Other than that, the information seems to show the fourth hypothesis was also correct, although the differences are not very drastic between high users, and low users.
+
+
+## Logistic regression
+
+As the following step we are going to use logistic regression to explore the relationship between the chosen variables and high_use. First we build a model using gml() command and then output a summary using summary() command.
+
+```{r}
+model1 <- glm(high_use ~ studytime + goout + absences + famrel, data = alc, family = "binomial")
+summary(model1)
+
+```
+
+We will output the coefficients using coef() command.
+
+```{r}
+coef(model1)
+```
+
+Next we will compute the coefficients as odds ratios and give the confidence intervals for them, via using the following code:
+
+```{r}
+OR <- coef(model1) %>% exp
+CI <- confint(model1) %>% exp
+```
+
+The odds ratios and their confidence intervals are output by invoking the following command:
+
+```{r}
+cbind (OR, CI)
+```
+
+The summary output indicated a statistical significance for all four variables. The highest (three stars), is for goout at less than 0.0001. The model seems to be overall rather good fit.
+
+For odds ratios, a value lower than 1 means association with higher odds of outcome, a value lower than 1 a lower odds of outcome, value of 0 no effect. Confidence intervals relate to the uncertainty in the model, with certain % in the given interval. 
+
+In this output, for studytime the OR was 0.58, indicating lower outcome for alc_high. Famrel similiary was under 0, at the value of 0.71, indicating likehood that the the person will not be a high alochol user. On the contraty, goout had OR > 1 at 2.1, indicating double possibility of high alcohol consumption. Absences is somewhat problematic. It has OR of 1.01.
+
+Coming back to the originaly hypothesis, the logistic regression model seems to fit the data relatively well.
+
+## Predictive power / cross tabulation
+
+In this section we exlore a cross tabulation of predictions vs. the actual values. We will will then see how many indidivuals the model classifies incorrectly. This is also known as training error. We utilize the predict() command and mutate the alc table as follows:
+
+```{r}
+probabilities <- predict(model1, type = "response")
+alc <- mutate(alc, probability = probabilities)
+alc <- mutate(alc, prediction = probability > 0.5)
+```
+
+
+```{r}
+table(high_use = alc$high_use, prediction = alc$prediction)
+
+```
+
+This can also be visualized with R.
+
+```{r}
+p1 <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+p1 + geom_point()
+```
+
+```{r}
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table() %>% addmargins()
+```
+
+We create a simple loss function as instructed in the DataCamp. Then we call the function to see the output, which indicates how many wrong classifications in the prediction data is.
+
+```{r}
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = alc$probability)
+
+```
+
+To interpret the results for this, the model has training error of 24 %. The tables above indicate how likely the model is to have false positive and false negative guesses as well. Overall the model seems to be rather accurate with the predictions.
+
+## 10-fold cross validation
+
+Finally we perform a 10-fold cross validation for the data and compare it to the DataCamp model. This means we "shuffle" the training set ten times. The actual data is divided into K (= 10 here) subset and each subset is used as both training set and testing set.
+
+We include a new library called boot. For the glm function we we as parameters the data, our previously defined loss function, the model, and number of K-folds. We get the following R script:
+
+```{r}
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = model1, K = 10)
+cv$delta[1]
+
+```
+
+The model developed here prediction error of 0.2382. According to the assignment the DataCamp model had error of 0.26, therefore this model has smaller training error.
+
+
+
+
+
+
