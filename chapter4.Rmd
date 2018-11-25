@@ -1,0 +1,236 @@
+# Data analysis for week 4
+
+## Loading, describing and exploring the data
+(parts 2 and 3)
+
+This week's analysis exercise uses the Boston dataset from the MASS package. The Boston dataset is titled "Housing Values in Suburbs of Boston". Included variables in the data are for instance crime rate by town (crim), proportion of non-retail business acres per town (indus), Charles River dummy variable (chas), nitrogen oxides concentration (nox) and average rooms per dwelling (rm). The dataset has total of 506 rows and 14 columns. More detailed information about all the variables can be read [here](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html)
+
+The source of the date is given on the site as follows:
+
+Harrison, D. and Rubinfeld, D.L. (1978) Hedonic prices and the demand for clean air. J. Environ. Economics and Management 5, 81-102.
+
+Belsley D.A., Kuh, E. and Welsch, R.E. (1980) Regression Diagnostics. Identifying Influential Data and Sources of Collinearity. New York: Wiley.
+
+To get an access to the dataset, we will access the MASS library. At the same time, we load dplyr, corrplot and qqplot2 for later use.
+
+```{r}
+library(MASS)
+library(dplyr)
+library(corrplot)
+library(ggplot2)
+```
+
+Next we will load the dataset and examine the structure slightly. Interpretations and 
+
+```{r}
+data("Boston")
+```
+
+```{r}
+str(Boston)
+dim(Boston)
+```
+
+
+
+```{r}
+pairs(Boston)
+summary(Boston)
+```
+
+We will additionally create a correlation matrix of the dataset with cor() function. We print it out and and then also visualize it using corrplot().
+
+```{r}
+cor_matrix<-cor(Boston) %>% round(digits = 2)
+cor_matrix
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b", tl.pos="d", tl.cex = 0.6)
+```
+
+We can make many observations from the correltation matrix. The matrix gives visual clues on the direction of the correlation by color (red negative, blue positive) and size (the strenght of correlation).
+
+Based on the matrix we can see that age (proportion of owner-occupied units built prior to 1940) and dis (weighted mean of distance to five Boston employment centers) has a strong negative correlation. This sounds rather logical as the central areas tend to be most attractive for building. 
+
+As an example of a strong positive correlation are indus (proportion of non-retail business acres per town ) and nox (nitrogen oxides concentration). This sounds also logical as industrial buildings may be the areas where air pollution is the worst.
+
+Regarding correlation, a variable that stands out quite much is chas (Charles River dummy variable - 1 if tract bounds river, 0 otherwise). It has barely any correlation in the chart.
+
+
+
+## Modifying the dataset
+
+(part 4)
+
+In this step we will first standardize the dataset. First we use scale() to create a scaled dataset and then print a summary of it.
+
+```{r}
+boston_scaled <- scale(Boston)
+summary(boston_scaled)
+```
+
+Compared to the original dataset, most notably all mean values are now 0. What has happened in the scaling is that the column means are substracted from the column value and divided with standard deviation. The new dataset reflects these changes.
+
+As the next step we create a new categorical variable to indicate crimate rate. The variable were are interested here is "crim". As the break points we will use the quantiles. First we will change the object to a data frame.
+
+```{r}
+boston_scaled <- as.data.frame(boston_scaled)
+```
+
+We will then be creating the a quantile vector and using it to form the new categorical variable "crime". We place as labels "low", "med_low", "med_high" and "high". After that we output the object as a table.
+
+```{r}
+bins <- quantile(boston_scaled$crim)
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE, label = c("low", "med_low", "med_high", "high"))
+table(crime)
+```
+
+Next, we will add the variable to the scaled dataset.
+
+```{r}
+boston_scaled <- data.frame(boston_scaled, crime)
+```
+
+And finally, we remove the old variable and check the structure to see that the process was successful.
+
+```{r}
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+str(boston_scaled)
+```
+
+To complete this part, we will divide the scaled dataset to two parts (train and test). First one will be a train set consisting of 80% of the data. The rest will be a test set. We are going to utilize nrows() and sample() commands for this.
+
+```{r}
+n <- nrow(boston_scaled)
+ind <- sample(n,  size = n * 0.8)
+train <- boston_scaled[ind,]
+test <- boston_scaled[-ind,]
+```
+
+
+## Linear discriminant analysis
+
+(part 5)
+
+Now we are going to fit a linear discriminant analysis (LDA) on the train set, which had 80% of the data. The target variable will be newly crated crime rate variable. Predictor variables will be all other variables in the dataset. To conclude, we will draw a LDA (bi)plot.
+
+LDA is a method for classification and dimension reduction. The function for LDA in R is lda().
+
+```{r}
+lda.fit <- lda(crime ~ ., data = train)
+lda.fit
+```
+
+And finally we visualize the plot for it.
+
+```{r}
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "orange", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+classes <- as.numeric(train$crime)
+plot(lda.fit, dimen = 2, col = classes, pch = classes)
+lda.arrows(lda.fit, myscale = 1)
+```
+
+
+
+## Predictions with the model
+
+(part 6)
+
+We are first saving the crime categories from the test set (we save it as correct_classes) and removing the categorical variable from the test set.
+
+```{r}
+correct_classes <- test$crime
+test <- dplyr::select(test, -crime)
+```
+
+As the next step we use predict() function based on our model. The results are then cross tabulated with the crime categories we just saved from the test set.
+
+```{r}
+lda.pred <- predict(lda.fit, newdata = test)
+table(correct = correct_classes, predicted = lda.pred$class)
+```
+
+To comment on the results, the prdictions seem to be more accurate in the "high" category. The errors seem to increase as we go towards the lower crime rate categories.
+
+## K-means algorithm
+
+(part 7)
+
+For this part, we will first reload the Boston dataset and do standardization.
+
+```{r}
+library(MASS)
+data("Boston")
+boston_new_scaled <- scale(Boston)
+boston_new_scaled <- as.data.frame(boston_new_scaled)
+```
+
+Next we will create an eucledian distance matrix and manhanttan distance matrix.
+
+```{r}
+dist_eu <- dist(boston_new_scaled)
+summary(dist_eu)
+dist_man <- dist(boston_new_scaled, method = 'manhattan')
+summary(dist_man)
+```
+
+Now we will run k-means algorighm on the dataset (with k of 3)
+
+```{r}
+km <-kmeans(boston_new_scaled, centers = 3)
+pairs(boston_new_scaled, col = km$cluster)
+```
+
+To find an optimal number of clusters we can use the WCSS (withing cluster sum of squares). The WCSS will experience a dramatic drop when the K is optimal. We will execute the following code to find the optimal K (up to max k = 10).
+
+```{r}
+set.seed(123)
+twcss <- sapply(1:10, function(k){kmeans(boston_new_scaled, k)$tot.withinss})
+qplot(x = 1:10, y = twcss, geom = 'line')
+```
+
+Based on examining the curve, the radical drop seems to happen around value of two. We will use K of 2 and redo the k-means algorithm with it, and visualize the clusters.
+
+```{r}
+km <-kmeans(boston_new_scaled, centers = 2)
+pairs(boston_new_scaled, col = km$cluster)
+```
+
+## Super-bonus
+
+For this part, ploty package was installed. The following given code is run on the training data that was used to fit LDA.
+
+
+
+```{r}
+library(plotly)
+
+model_predictors <- dplyr::select(train, -crime)
+
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers')
+```
+
+
+Next we adjust the code. Argument color will be added to the plot_ly() function on the crime classes of the train set.
+
+
+```{r}
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color=train$crime)
+```
+
+
+
