@@ -1,0 +1,158 @@
+# Data analysis for week 5
+
+## Loading, describing and exploring the data
+
+The dataset used is part of the United Nations Development Programme. You can visit the website by clicking [here](http://hdr.undp.org/en/content/human-development-index-hdi). The data has been wrangled. Lets first load the data.
+
+```{r}
+library(dplyr)
+human <- read.csv("data/human.csv", sep= ",", header=TRUE)
+human <- select(human, -1)
+```
+
+Because the dataset has been wrangled and variable names changed, here are explanations of all the variables:
+
+**Edu2Ratio** = Ratio of proportion of females with at least secondary education / proportion of males with at least secondary education 
+
+**LabourRatio** = Ratio of proportion of females in the labour force / proportion of males in the labour force
+
+**LifeExp** = Life expectency at birth
+
+**EduExp** = Expected years of schooling
+
+**GNI** = gross national income per capita
+
+**MatMorRatio** = Maternal mortality ratio
+
+**AdoBirth** = Adolescent birth rate
+
+**ParliamentF** = % of female representatives in parliament
+
+Next we will have a look at the structure and dimensions of the data.
+
+```{r}
+str(human)
+summary(human)
+```
+
+As can be seen, the dataset has 155 observations and 8 variables. This is less than before the wrangling process. Before commenting more on the data, we will create graphical overview and show summaries of the variables in the data.
+
+```{r}
+library(corrplot)
+library(GGally)
+ggpairs(human)
+cor(human)
+cor(human) %>% corrplot
+
+```
+
+We can make many observations from the correltation matrix. The matrix gives visual clues on the direction of the correlation by color (red negative, blue positive) and size (the strenght of correlation). From the correlation matrix we can see MatMorRat and LifeExp have a strong negative correlation. This relationship is expected as they mortality is rather clearly connected to life expectency. Quite interestingy AdoBirth has also rather strong negative correlation with life expectency. For this I can't off the top of my head think of any one simple reason. Also an interesting feature is that AdoBirth and MatMorRatio have a positive correlation. I'm far from being expert on the topic but it perhaps has to do with poverty, age and possible complications in relation to childbirth. Interestingly ParliamentF doesn't seem to have a significant correlation with any variable.
+
+To briefly comment on the variables, especially the added ratio variables, looks like both are slightly skewed with the mean of Edu2Ratio being 0.8529 and median 0.9375 and LabourRatio having mean of 0.7074 and median 0.7535. My uneducated quess would be that these has to do with cultural differences and slowly changing conditions in equality (hence the difference with education and labour variables).
+
+
+## Principal component analysis on non-standardized data
+
+
+In this part we will perform PCA on non-standardized version of the dataset. R studio has two functions in the default package that are able to do this: princomp() and prcomp(). We will be using prcomp() as it uses Singlular Value Decomposition and is considered more accurate numerically. Therefore, we invoke the command on the human dataset before any standardization in the following way:
+
+```{r}
+pca_human <- prcomp(human)
+```
+
+The eight principal components look the following in numeric form:
+
+```{r}
+pca_human
+```
+
+Next we will round the percetages of variance, print out the precentages and draw a biplot to display the observations by the first two principal coordinates.
+
+```{r}
+s <- summary(pca_human)
+s
+pca_pr <- round(100*s$importance[2,], digits = 1)
+pca_pr
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2])
+```
+ 
+Looking at the visualization my initial though was that I had made an error with the plot. However, as I look at the output of the standard deviation, the numbers are rather huge, explaining how the visualized chart has been form. It would seem more convinient to standardize the data (where means will be zero). As this is extremely hard to interpret, I will move on to the next part, which deals with standardized data.
+ 
+## Principal component analysis on standardized data
+
+For this part we will standardize the variables and repeat the analysis. We begin by scaling.
+
+```{r}
+human_std <- scale(human)
+summary(human_std)
+```
+
+Next we will perform PCA again, but this time on the standardized dataset.
+
+```{r}
+pca_human <- prcomp(human_std)
+pca_human
+```
+
+Followed by..
+
+```{r}
+s <- summary(pca_human)
+s
+pca_pr <- round(100*s$importance[2,], digits = 1)
+pca_pr
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2])
+```
+
+As can be seen from the newly drawn visualization, the chart is much easier to read.
+
+## Tea dataset analysis and Multiple Correspondence Analysis (MCA)
+
+For this part we are going to load a tea dataset from FactoMineR package and perform Multiple Correspondence Analysis (MCA) on it.
+
+```{r}
+library(FactoMineR)
+data(tea)
+```
+
+The data structure:
+
+```{r}
+str(tea)
+```
+
+We are going to limit the MCA-analysis to same columns of data as in DataCamp. Therefore, we are keepign only tea, How, how, sugar Where and Lunch variables.
+
+```{r}
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_time <- select(tea,keep_columns)
+```
+
+Now lets have a look at the summary and structure of the data again.
+
+```{r}
+summary(tea_time)
+str(tea_time)
+```
+
+As the next step, we will visualize the data we have.
+
+```{r}
+library(ggplot2)
+library(tidyr)
+gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+Finally, we will pefrom a Multiple Correspondence Analysis and visualize the MCA.
+
+```{r}
+mca <- MCA(tea_time, graph = FALSE)
+summary(mca)
+```
+
+
+```{r}
+plot(mca, invisible=c("ind"), habillage = "quali")
+```
